@@ -1,0 +1,106 @@
+[
+  {
+    "category_group": "explicit_agreement",
+    "category": "agree_schedule_call",
+    "description": "Referrer (NOT the job seeker) explicitly agrees to schedule a call with the job seeker in the **last** message.",
+    "clarification": "No conditions attached.\nExample: “Sure – let’s schedule a call for tomorrow!”",
+    "human_action_required": false,
+    "reply_needed": true
+  },
+  {
+    "category_group": "explicit_agreement",
+    "category": "agree_provide_referral",
+    "description": "Referrer (NOT the job seeker) explicitly agrees to provide a referral/recommendation in the **last** message.",
+    "clarification": "Immediate agreement with no prerequisites.\nExample: “I’ll submit your referral today.”",
+    "human_action_required": false,
+    "reply_needed": true
+  },
+  {
+    "category_group": "conditional_assistance",
+    "category": "agree_on_condition",
+    "description": "Referrer (NOT the job seeker) agrees to help, but only if specific conditions are met (e.g., receiving certain info) in the **last** message.",
+    "clarification": "The referrer answered and is asking for some action or info from the job seeker. Requires job seeker's answer to continue\nExample: “I can refer you after you send me your résumé.”",
+    "human_action_required": true,
+    "reply_needed": true
+  },
+  {
+    "category_group": "conditional_assistance",
+    "category": "request_additional_info",
+    "description": "Referrer (NOT the job seeker) asks for more information or clarification from job seeker before committing in the **last** message.",
+    "clarification": "Seeking details; not a promise yet. The referer is asking for some action or info from the job seeker, requiring job seeker's answer to continue.\nExample: “Which role or team are you targeting?”",
+    "human_action_required": true,
+    "reply_needed": true
+  },
+  {
+    "category_group": "alternative_assistance",
+    "category": "suggest_alternative_contact",
+    "description": "Referrer (NOT the job seeker) cannot directly fulfill the request, but suggests an alternative contact or resource in the **last** message.",
+    "clarification": "Not a yes to the original ask, but offers another path.\nExample: “I can’t refer you myself, but you should reach out to Jane in HR.”",
+    "human_action_required": false,
+    "reply_needed": true
+  },
+  {
+    "category_group": "alternative_assistance",
+    "category": "offer_alternative_support",
+    "description": "Referrer (NOT the job seeker) offers alternative help instead of the requested action in the **last** message.",
+    "clarification": "Help in another form (no direct referral/call).\nExample: “I can review your résumé for you, but I can’t submit an official referral.”",
+    "human_action_required": false,
+    "reply_needed": true
+  },
+  {
+    "category_group": "no_commitment",
+    "category": "respond_non_committally",
+    "description": "Referrer (NOT the job seeker) responds without making a firm commitment to help in the **last** message.",
+    "clarification": "Acknowledges the request or gives a vague/non-committal promise at the moment.\nExamples: 1.“I’ll see what I can do.” (No guarantee) 2.“I can’t help right now, but maybe next month.” (Deferred help)",
+    "human_action_required": false,
+    "reply_needed": true
+  },
+  {
+    "category_group": "generic_response",
+    "category": "respond_generically",
+    "description": "Referrer’s reply does not address the request at all (off-topic or generic polite response) in the **last** message.",
+    "clarification": "Ignores the ask entirely.\nExample: “Thanks for reaching out!” (and nothing more relevant)",
+    "human_action_required": false,
+    "reply_needed": true
+  },
+  {
+    "category_group": "explicit_refusal",
+    "category": "refuse_schedule_call",
+    "description": "Referrer (NOT the job seeker) directly refuses to schedule a call in the **last** message.",
+    "clarification": "Firm refusal with no alternative offered.\nExample: “I’m sorry, I can’t set up a call.”",
+    "human_action_required": false,
+    "reply_needed": true
+  },
+  {
+    "category_group": "explicit_refusal",
+    "category": "refuse_provide_referral",
+    "description": "Referrer (NOT the job seeker) directly refuses to provide a referral in the **last** message.",
+    "clarification": "No willingness to help with referral.\nExample: “I don’t feel comfortable referring someone I haven’t worked with.”",
+    "human_action_required": false,
+    "reply_needed": true
+  },
+  {
+    "category_group": "no_response",
+    "category": "no_reply",
+    "description": "No referrer's response to the last job seeker's message.",
+    "clarification": "The referrer does not reply to the last message from job seeker.",
+    "human_action_required": false,
+    "reply_needed": true
+  },
+  {
+    "category_group": "no_response",
+    "category": "followed_up_no_reply",
+    "description": "No referrer's response to the last job seeker's follow-up message.",
+    "clarification": "The referrer does not reply to the follow-up message from job seeker.",
+    "human_action_required": false,
+    "reply_needed": false
+  },
+  {
+    "category_group": "end_of_conversation",
+    "category": "end_of_conversation",
+    "description": "The whole talk for asking referal is ended, and there is no need for continuation or more conversation closers.",
+    "clarification": "Example: “Thanks again for all the help. Have a great day!”",
+    "human_action_required": false,
+    "reply_needed": false
+  }
+]
