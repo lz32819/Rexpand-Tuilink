@@ -4,6 +4,7 @@ from models.llm_result import (
     ClassifierResult,
     MessageGeneratorResult,
     TopicSuggesterResult,
+    ActionsSummaryResult,
 )
 
 
@@ -14,3 +15,4 @@ class State(BaseModel):
     suggested_topics: TopicSuggesterResult | None = None
     selected_topics: TopicSuggesterResult | None = None
     generated_reply_message: MessageGeneratorResult | None = None
+    actions_summary: ActionsSummaryResult | None = None

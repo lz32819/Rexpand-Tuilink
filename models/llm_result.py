@@ -28,3 +28,19 @@ class MessageGeneratorResult(BaseModel):
     message: str
     confidence: float
     reason: str
+
+
+class Action(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    action: str
+    priority: str
+    description: str
+    referenced_message_ids: list[str]
+
+
+class ActionsSummaryResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    actions: list[Action]
+    summary: str
+    confidence: float
+    reason: str
