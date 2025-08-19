@@ -2,18 +2,21 @@ import json
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from models.context import Context
-from models.llm_result import ClassifierResult, TopicSuggesterResult
+from models.llm_result import ClassifierResult, TopicSuggesterResult, ReferralPossibilityResult
 from utils.llm import invoke_llm
 
 
 def suggest_topics(
-    context: Context, classified_category: ClassifierResult, dry_run: bool = False
+    context: Context, 
+    classified_category: ClassifierResult, 
+    referral_possibility: ReferralPossibilityResult | None = None,
+    dry_run: bool = False
 ) -> TopicSuggesterResult:
     system_prompt = f"""\
 You are a helpful assistant that suggests topics for the job seeker to reply for a potential referral or intro call.
-You will be given the conversation history, classified category, job seeker profile (optional), and referrer profile (optional).
-You will need to provide topics along with confidence score and reason.
-When suggesting topics, always evaluate the latest messages first.
+You will be given the conversation history, classified category, job seeker profile (optional), referrer profile (optional), and referral possibility assessment (optional).
+
+When suggesting topics, always evaluate the latest messages first and consider the referral possibility assessment.
 Never make up facts.
 
 Topic Examples (but not limited to):
@@ -23,6 +26,10 @@ Topic Examples (but not limited to):
 4. Ask for a brief call
 5. Ask for alternative referrers
 6. Follow-up
+7. Apologize and ask for another chance (if referral was lost)
+8. Ask for feedback on how to improve
+9. Suggest alternative ways to connect
+10. Thank for the opportunity and move on gracefully (if referral is not possible)
 """
 
     user_prompt = f"""\
@@ -31,6 +38,20 @@ Conversation Messages:
 
 Classified Category:
 {classified_category}
+"""
+
+    if referral_possibility:
+        user_prompt += f"""
+Referral Possibility Assessment:
+- Referral Possible: {referral_possibility.referral_possible}
+- Confidence: {referral_possibility.confidence}
+- Reason: {referral_possibility.reason}
+- Next Steps: {referral_possibility.next_steps}
+- Barriers: {referral_possibility.barriers}
+
+Based on this assessment, suggest topics that are appropriate for the current situation.
+If referral is not possible, focus on graceful exit strategies and learning opportunities.
+If referral is still possible, focus on actions that can secure it.
 """
 
     if context.user_profile:
