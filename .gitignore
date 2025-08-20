@@ -26,6 +26,7 @@ wheels/
 # Virtual Environment
 .env
 .venv
+.env.example
 env/
 venv/
 ENV/
@@ -47,3 +48,7 @@ Thumbs.db
 
 # Output
 output/
+
+key.txt
+.env.example
+.env.example

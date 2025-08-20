@@ -5,6 +5,7 @@ from models.workflow import State
 from nodes.classifier import classify_conversation
 from nodes.message_generator import generate_message
 from nodes.topic_suggester import suggest_topics
+from nodes.actions_summarizer import summarize_actions
 
 
 CATEGORIES = [Category(**category) for category in read_file("./input/categories.json")]
@@ -55,8 +56,11 @@ def orchestrate(
 
     # If human action is required, run the actions summarizer and prompt the human to take action
     if extended_category.human_action_required:
-        # TODO: Add actions summarizer
-        state.step = "todo: human action required"
+        # Generate actions summary for human review
+        state.actions_summary = summarize_actions(
+            state.context, state.classified_category, dry_run=False
+        )
+        state.step = "next: human action required"
         return state
 
     # If human action is not required, suggest topics
