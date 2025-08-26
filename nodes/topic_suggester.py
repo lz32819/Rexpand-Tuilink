@@ -45,9 +45,8 @@ Classified Category:
 Referral Possibility Assessment:
 - Referral Possible: {referral_possibility.referral_possible}
 - Confidence: {referral_possibility.confidence}
-- Reason: {referral_possibility.reason}
-- Next Steps: {referral_possibility.next_steps}
-- Barriers: {referral_possibility.barriers}
+- Reason: {referral_possibility.reason if referral_possibility.reason else "N/A"}
+- Barriers: {referral_possibility.barriers if referral_possibility.barriers else "N/A"}
 
 Based on this assessment, suggest topics that are appropriate for the current situation.
 If referral is not possible, focus on graceful exit strategies and learning opportunities.

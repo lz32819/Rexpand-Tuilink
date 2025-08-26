@@ -23,16 +23,12 @@ You will be given:
 Your task is to analyze whether a referral is still achievable and provide:
 1. A clear yes/no answer on referral possibility
 2. Your confidence level in this assessment
-3. Reasoning based on the conversation context and actions taken
-4. Next steps that could help secure the referral (if possible)
-5. Any barriers or obstacles that might prevent the referral
 
-Consider factors like:
-- The relationship between the job seeker and referrer
-- The quality and appropriateness of actions taken
-- The referrer's receptiveness and availability
-- Timing and context of the conversation
-- Any negative signals or missed opportunities
+Only provide detailed reasoning and barriers when the referral is NOT possible:
+- If referral_possible = True: Set reason and barriers to null
+- If referral_possible = False: Provide detailed reason and list of barriers
+
+You should consider if the user can satisfy the requirements proposed by the referrer. For example, if the referrer mentions that the company does not provide sponsorship for the position while the user needs sponsorship, it would be impossible to get a referral. 
 
 Be realistic and honest in your assessment. Don't sugar-coat if the referral opportunity is lost.
 """

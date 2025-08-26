@@ -50,6 +50,5 @@ class ReferralPossibilityResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
     referral_possible: bool
     confidence: float
-    reason: str
-    next_steps: list[str]
-    barriers: list[str]
+    reason: str | None = None
+    barriers: list[str] | None = None
