@@ -44,3 +44,11 @@ class ActionsSummaryResult(BaseModel):
     summary: str
     confidence: float
     reason: str
+
+
+class ReferralPossibilityResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    referral_possible: bool
+    confidence: float
+    reason: str | None = None
+    barriers: list[str] | None = None

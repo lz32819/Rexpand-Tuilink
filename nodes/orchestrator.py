@@ -6,6 +6,7 @@ from nodes.classifier import classify_conversation
 from nodes.message_generator import generate_message
 from nodes.topic_suggester import suggest_topics
 from nodes.actions_summarizer import summarize_actions
+from nodes.referral_inferencer import infer_referral_possibility
 
 
 CATEGORIES = [Category(**category) for category in read_file("./input/categories.json")]
@@ -56,6 +57,31 @@ def orchestrate(
 
     # If human action is required, run the actions summarizer and prompt the human to take action
     if extended_category.human_action_required:
+        # First check if referral possibility inference result already exists
+        if state.referral_possibility is not None:
+            # Inference result exists, proceed to topic suggester with actions
+            state.suggested_topics = suggest_topics(
+                state.context, 
+                state.classified_category, 
+                state.referral_possibility,
+                dry_run=False
+            )
+            state.step = "next: select topics"
+            return state
+        
+        # If inference result doesn't exist, check if actions summary exists
+        if state.actions_summary is not None:
+            # Actions summary exists but no inference yet, run referral possibility inference
+            state.referral_possibility = infer_referral_possibility(
+                state.context, 
+                state.classified_category, 
+                state.actions_summary, 
+                dry_run=False
+            )
+            state.step = "next: referral possibility assessed"
+            return state
+        
+        # If neither inference result nor actions summary exists, check if questions still remain
         # Generate actions summary for human review
         state.actions_summary = summarize_actions(
             state.context, state.classified_category, dry_run=False
@@ -67,7 +93,7 @@ def orchestrate(
     else:
         # Suggest topics
         state.suggested_topics = suggest_topics(
-            state.context, state.classified_category, dry_run=False
+            state.context, state.classified_category, referral_possibility=None, dry_run=False
         )
 
         state.step = "next: select topics"

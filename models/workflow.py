@@ -5,6 +5,7 @@ from models.llm_result import (
     MessageGeneratorResult,
     TopicSuggesterResult,
     ActionsSummaryResult,
+    ReferralPossibilityResult,
 )
 
 
@@ -16,3 +17,4 @@ class State(BaseModel):
     selected_topics: TopicSuggesterResult | None = None
     generated_reply_message: MessageGeneratorResult | None = None
     actions_summary: ActionsSummaryResult | None = None
+    referral_possibility: ReferralPossibilityResult | None = None
