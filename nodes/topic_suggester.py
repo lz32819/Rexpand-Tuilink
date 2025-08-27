@@ -46,7 +46,6 @@ Referral Possibility Assessment:
 - Referral Possible: {referral_possibility.referral_possible}
 - Confidence: {referral_possibility.confidence}
 - Reason: {referral_possibility.reason}
-- Next Steps: {referral_possibility.next_steps}
 - Barriers: {referral_possibility.barriers}
 
 Based on this assessment, suggest topics that are appropriate for the current situation.
