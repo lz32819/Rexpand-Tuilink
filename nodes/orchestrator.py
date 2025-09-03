@@ -147,7 +147,7 @@ def check_human_action_required_router(state: WorkflowState) -> str:
         return "no_human_action"
 
 
-def handle_human_action_workflow(state: WorkflowState) -> str:
+def handle_human_action_workflow(state: WorkflowState) -> WorkflowState:
     """Handle the human action workflow."""
     # Check if actions summary exists but referral possibility hasn't been assessed yet
     if (state["context"].actions_summary is not None and 
@@ -160,7 +160,7 @@ def handle_human_action_workflow(state: WorkflowState) -> str:
             dry_run=False
         )
         state["context"].step = "next: referral possibility assessed"
-        return "end"
+        return state
     
     # Check if referral possibility has been assessed
     if state["context"].referral_possibility is not None:
@@ -172,7 +172,7 @@ def handle_human_action_workflow(state: WorkflowState) -> str:
             dry_run=False
         )
         state["context"].step = "next: select topics"
-        return "end"
+        return state
     
     # Generate actions summary for human review
     state["context"].actions_summary = summarize_actions(
@@ -181,7 +181,7 @@ def handle_human_action_workflow(state: WorkflowState) -> str:
         dry_run=False
     )
     state["context"].step = "next: human action required"
-    return "end"
+    return state
 
 
 def suggest_topics_no_human_action(state: WorkflowState) -> WorkflowState:
