@@ -51,5 +51,4 @@ class ReferralPossibilityResult(BaseModel):
     referral_possible: bool
     confidence: float
     reason: str
-    next_steps: list[str]
     barriers: list[str]
