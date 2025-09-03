@@ -24,9 +24,9 @@ Your task is to analyze whether a referral is still achievable and provide:
 1. A clear yes/no answer on referral possibility
 2. Your confidence level in this assessment
 
-Only provide detailed reasoning and barriers when the referral is NOT possible:
-- If referral_possible = True: Set reason and barriers to null
-- If referral_possible = False: Provide detailed reason and list of barriers
+Only provide detailed reasoning when the referral is NOT possible:
+- If referral_possible = True: Set reason to null
+- If referral_possible = False: Provide detailed reason explaining why referral is not possible
 
 You should consider if the user can satisfy the requirements proposed by the referrer. For example, if the referrer mentions that the company does not provide sponsorship for the position while the user needs sponsorship, it would be impossible to get a referral. 
 
