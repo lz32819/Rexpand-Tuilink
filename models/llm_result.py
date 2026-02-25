@@ -37,6 +37,7 @@ class Action(BaseModel):
     priority: str
     description: str
     referenced_message_ids: list[str]
+    completed: bool = False
 
 
 class ActionsSummaryResult(BaseModel):
@@ -52,10 +53,3 @@ class ReferralPossibilityResult(BaseModel):
     referral_possible: bool
     confidence: float
     reason: str | None = None
-
-
-class CompletedAction(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    action_id: str
-    action_description: str
-    completed: bool

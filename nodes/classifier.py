@@ -13,7 +13,7 @@ def classify_conversation(
     allowed_categories = [c.category for c in categories]
     category_definitions = "\n".join(
         [
-            f"- {c.category} ({c.category_group}): {c.description}\n  Clarification: {c.clarification}"
+            f"- {c.category}: {c.description}\n  Clarification: {c.clarification}"
             for c in categories
         ]
     )
@@ -25,7 +25,7 @@ You will need to provide confidence score, reason, and referenced message ids (o
 Never make up facts.
 
 IMPORTANT:
-- The output field `category` MUST be exactly one of the allowed category values below (NOT a category_group).
+- The output field `category` MUST be exactly one of the allowed category values below.
 - Allowed categories: {allowed_categories}
 
 Category Definition:

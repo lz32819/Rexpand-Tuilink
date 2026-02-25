@@ -50,7 +50,41 @@ Referrer Profile:
         "name": "actions_summary_result",
         "strict": True,
         "type": "json_schema",
-        "schema": ActionsSummaryResult.model_json_schema(),
+        # NOTE: We intentionally omit `Action.completed` here. Completion is user-managed,
+        # and OpenAI "strict" JSON schema requires `required` to include every key in
+        # `properties` (Pydantic omits defaulted fields like `completed` from `required`).
+        "schema": {
+            "type": "object",
+            "properties": {
+                "actions": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "action": {"type": "string"},
+                            "priority": {"type": "string"},
+                            "description": {"type": "string"},
+                            "referenced_message_ids": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
+                        },
+                        "required": [
+                            "action",
+                            "priority",
+                            "description",
+                            "referenced_message_ids",
+                        ],
+                        "additionalProperties": False,
+                    },
+                },
+                "summary": {"type": "string"},
+                "confidence": {"type": "number"},
+                "reason": {"type": "string"},
+            },
+            "required": ["actions", "summary", "confidence", "reason"],
+            "additionalProperties": False,
+        },
     }
 
     if dry_run:

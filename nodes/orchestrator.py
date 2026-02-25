@@ -21,11 +21,6 @@ EXTENDED_CATEGORY_LOOKUP: dict[str, ExtendedCategory] = {
     category["category"]: ExtendedCategory(**category)
     for category in read_file("./input/categories.json")
 }
-# Group-level fallback for cases where the classifier returns a category_group instead of a category.
-# (We assume flags are consistent within a group; if not, we keep the first seen.)
-EXTENDED_CATEGORY_GROUP_LOOKUP: dict[str, ExtendedCategory] = {}
-for _cat, _ext in EXTENDED_CATEGORY_LOOKUP.items():
-    EXTENDED_CATEGORY_GROUP_LOOKUP.setdefault(_ext.category_group, _ext)
 
 
 class WorkflowState(TypedDict):
@@ -34,41 +29,14 @@ class WorkflowState(TypedDict):
     context: State
 
 
-def _extended_category(state: WorkflowState) -> ExtendedCategory:
-    return EXTENDED_CATEGORY_LOOKUP[state["context"].classified_category.category]
-
-
-def _fingerprint(context: State) -> str:
+def _category_meta(state: WorkflowState) -> ExtendedCategory | None:
     """
-    Fingerprint the current conversation so we can reset cached routing fields when
-    new messages arrive (new conversation iteration).
+    Return the metadata for the currently classified category.
     """
-    messages = context.context.messages
-    if not messages:
-        return "empty"
-    last = messages[-1]
-    return f"{len(messages)}:{last.id}:{last.delivered_at}"
-
-
-def _reset_cached_fields(s: State) -> None:
-    """
-    Reset cached node outputs/routing decisions so a new conversation iteration can run cleanly.
-
-    IMPORTANT: We intentionally do NOT clear `generated_reply_message` here, so callers can still
-    read the last generated message after an iteration ends.
-    """
-    s.step = None
-    s.classified_category = None
-    s.reply_needed = None
-    s.human_action_required = None
-    s.actions_fulfilled = None
-    s.suggested_topics = None
-    s.selected_topics = None
-    s.actions_summary = None
-    s.referral_possibility = None
-    s.questions_exist = None
-    s.questions_answered = None
-    s.completed_actions = []
+    cat = state["context"].classified_category
+    if not cat:
+        return None
+    return EXTENDED_CATEGORY_LOOKUP.get(cat.category)
 
 
 # -----------------------------
@@ -77,36 +45,17 @@ def _reset_cached_fields(s: State) -> None:
 def classify_and_cache_node(state: WorkflowState) -> WorkflowState:
     s = state["context"]
 
-    fp = _fingerprint(state["context"])
-    if s.context_fingerprint != fp:
-        _reset_cached_fields(s)
-        s.context_fingerprint = fp
-
     if s.classified_category is None:
         s.classified_category = classify_conversation(s.context, CATEGORIES, dry_run=False)
-
-    ext = EXTENDED_CATEGORY_LOOKUP.get(s.classified_category.category)
-    if ext is None:
-        ext = EXTENDED_CATEGORY_GROUP_LOOKUP.get(s.classified_category.category)
-    # if ext is None:
-    #     # Unknown label: default to a conservative flow that still helps the user.
-    #     # (Reply needed = True; no human action required).
-    #     if s.reply_needed is None:
-    #         s.reply_needed = True
-    #     if s.human_action_required is None:
-    #         s.human_action_required = False
-    #     s.step = "warn: unknown category label"
-    #     return state
-    # if s.reply_needed is None:
-    #     s.reply_needed = ext.reply_needed
-    # if s.human_action_required is None:
-    #     s.human_action_required = ext.human_action_required
 
     return state
 
 
 def reply_needed_router(state: WorkflowState) -> str:
-    return "end" if state["context"].reply_needed is False else "next"
+    ext = _category_meta(state)
+    # Defensive fallback: if unknown category, assume we should reply.
+    reply_needed = True if ext is None else bool(ext.reply_needed)
+    return "end" if reply_needed is False else "next"
 
 
 def no_reply_end_node(state: WorkflowState) -> WorkflowState:
@@ -115,7 +64,10 @@ def no_reply_end_node(state: WorkflowState) -> WorkflowState:
 
 
 def action_required_router(state: WorkflowState) -> str:
-    return "actions" if state["context"].human_action_required else "no_actions"
+    ext = _category_meta(state)
+    # Defensive fallback: if unknown category, assume no required actions.
+    human_action_required = False if ext is None else bool(ext.human_action_required)
+    return "actions" if human_action_required else "no_actions"
 
 
 # -----------------------------
@@ -150,9 +102,6 @@ def generate_message_node(state: WorkflowState) -> WorkflowState:
     return state
 
 
-# -----------------------------
-# Human-action-required path
-# -----------------------------
 def ensure_actions_summary_node(state: WorkflowState) -> WorkflowState:
     s = state["context"]
     if s.actions_summary is None:
@@ -163,7 +112,7 @@ def ensure_actions_summary_node(state: WorkflowState) -> WorkflowState:
 def actions_fulfilled_node(state: WorkflowState) -> WorkflowState:
     s = state["context"]
     if s.actions_fulfilled is None:
-        s.actions_fulfilled = are_all_actions_completed(s.actions_summary, s.completed_actions)
+        s.actions_fulfilled = are_all_actions_completed(s.actions_summary)
     return state
 
 

@@ -62,7 +62,18 @@ Referrer Profile:
         "name": "referral_possibility_result",
         "strict": True,
         "type": "json_schema",
-        "schema": ReferralPossibilityResult.model_json_schema(),
+        # OpenAI "strict" JSON schema requires `required` to include every key in `properties`.
+        # We require `reason` but allow it to be null when `referral_possible` is True.
+        "schema": {
+            "type": "object",
+            "properties": {
+                "referral_possible": {"type": "boolean"},
+                "confidence": {"type": "number"},
+                "reason": {"type": ["string", "null"]},
+            },
+            "required": ["referral_possible", "confidence", "reason"],
+            "additionalProperties": False,
+        },
     }
 
     if dry_run:
