@@ -1,3 +1,4 @@
+from datetime import datetime
 from pydantic import ConfigDict
 
 from models.base import BaseModel
@@ -36,6 +37,7 @@ class Action(BaseModel):
     priority: str
     description: str
     referenced_message_ids: list[str]
+    completed: bool = False
 
 
 class ActionsSummaryResult(BaseModel):
@@ -51,4 +53,3 @@ class ReferralPossibilityResult(BaseModel):
     referral_possible: bool
     confidence: float
     reason: str | None = None
-    barriers: list[str] | None = None

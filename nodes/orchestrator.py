@@ -1,100 +1,213 @@
+from __future__ import annotations
+
+from typing import TypedDict
+
+from langgraph.graph import END, StateGraph
+
 from rexpand_pyutils_file import read_file
 
 from models.category import Category, ExtendedCategory
 from models.workflow import State
+from nodes.actions_summarizer import summarize_actions
 from nodes.classifier import classify_conversation
 from nodes.message_generator import generate_message
-from nodes.topic_suggester import suggest_topics
-from nodes.actions_summarizer import summarize_actions
 from nodes.referral_inferencer import infer_referral_possibility
+from nodes.topic_suggester import suggest_topics
+from utils.action_completion_detector import are_all_actions_completed
 
 
 CATEGORIES = [Category(**category) for category in read_file("./input/categories.json")]
-EXTENDED_CATEGORY_LOOKUP = {
+EXTENDED_CATEGORY_LOOKUP: dict[str, ExtendedCategory] = {
     category["category"]: ExtendedCategory(**category)
     for category in read_file("./input/categories.json")
 }
 
 
-def orchestrate(
-    state: State,
-) -> State:
-    # If the reply message is already generated, return the current state as final state
-    if state.generated_reply_message is not None:
-        state.step = "end: reply generated"
-        return state
+class WorkflowState(TypedDict):
+    """Wrapper state for the LangGraph workflow."""
 
-    # If the topics are already selected, generate the reply message and return the current state as final state
-    if state.selected_topics is not None:
-        state.generated_reply_message = generate_message(
-            state.context,
-            state.classified_category,
-            state.selected_topics,
+    context: State
+
+
+def _category_meta(state: WorkflowState) -> ExtendedCategory | None:
+    """
+    Return the metadata for the currently classified category.
+    """
+    cat = state["context"].classified_category
+    if not cat:
+        return None
+    return EXTENDED_CATEGORY_LOOKUP.get(cat.category)
+
+
+# -----------------------------
+# Classifier-first entry node
+# -----------------------------
+def classify_and_cache_node(state: WorkflowState) -> WorkflowState:
+    s = state["context"]
+
+    if s.classified_category is None:
+        s.classified_category = classify_conversation(s.context, CATEGORIES, dry_run=False)
+
+    return state
+
+
+def reply_needed_router(state: WorkflowState) -> str:
+    ext = _category_meta(state)
+    # Defensive fallback: if unknown category, assume we should reply.
+    reply_needed = True if ext is None else bool(ext.reply_needed)
+    return "end" if reply_needed is False else "next"
+
+
+def no_reply_end_node(state: WorkflowState) -> WorkflowState:
+    state["context"].step = "end: no reply needed"
+    return state
+
+
+def action_required_router(state: WorkflowState) -> str:
+    ext = _category_meta(state)
+    # Defensive fallback: if unknown category, assume no required actions.
+    human_action_required = False if ext is None else bool(ext.human_action_required)
+    return "actions" if human_action_required else "no_actions"
+
+
+# -----------------------------
+# No-human-action path
+# -----------------------------
+def topic_selection_router(state: WorkflowState) -> str:
+    return "generate" if state["context"].selected_topics is not None else "suggest"
+
+
+def suggest_topics_node(state: WorkflowState) -> WorkflowState:
+    s = state["context"]
+    if s.suggested_topics is None:
+        s.suggested_topics = suggest_topics(
+            s.context,
+            s.classified_category,
+            referral_possibility=s.referral_possibility,
             dry_run=False,
         )
+    s.step = "next: select topics"
+    return state
 
-        state.step = "end: reply generated"
-        return state
 
-    # If the suggested topics are already generated, prompt the human to select topics
-    if state.suggested_topics is not None:
-        state.step = "next: select topics"
-        return state
+def generate_message_node(state: WorkflowState) -> WorkflowState:
+    s = state["context"]
+    s.generated_reply_message = generate_message(
+        s.context,
+        s.classified_category,
+        s.selected_topics,
+        dry_run=False,
+    )
+    s.step = "end: reply generated"
+    return state
 
-    # If the conversation is not classified, classify it
-    if state.classified_category is None:
-        state.classified_category = classify_conversation(
-            state.context, CATEGORIES, dry_run=False
+
+def ensure_actions_summary_node(state: WorkflowState) -> WorkflowState:
+    s = state["context"]
+    if s.actions_summary is None:
+        s.actions_summary = summarize_actions(s.context, s.classified_category, dry_run=False)
+    return state
+
+
+def actions_fulfilled_node(state: WorkflowState) -> WorkflowState:
+    s = state["context"]
+    if s.actions_fulfilled is None:
+        s.actions_fulfilled = are_all_actions_completed(s.actions_summary)
+    return state
+
+
+def actions_fulfilled_router(state: WorkflowState) -> str:
+    return "fulfilled" if state["context"].actions_fulfilled else "unfulfilled"
+
+
+def prompt_fulfill_actions_node(state: WorkflowState) -> WorkflowState:
+    state["context"].step = "next: fulfill actions"
+    return state
+
+
+def infer_referral_possibility_node(state: WorkflowState) -> WorkflowState:
+    s = state["context"]
+    if s.referral_possibility is None:
+        s.referral_possibility = infer_referral_possibility(
+            s.context,
+            s.classified_category,
+            s.actions_summary,
+            dry_run=False,
         )
+    return state
 
-    # Get the extended category with post-processing indicators
-    extended_category = EXTENDED_CATEGORY_LOOKUP[state.classified_category.category]
 
-    # If no reply is needed, return the current state as final state
-    if not extended_category.reply_needed:
-        state.step = "end: no reply needed"
-        return state
+def create_workflow() -> StateGraph:
+    """
+    LangGraph Orchestrator (AI helper for job seekers to communicate with referrers).
 
-    # If human action is required, run the actions summarizer and prompt the human to take action
-    if extended_category.human_action_required:
-        # First check if referral possibility inference result already exists
-        if state.referral_possibility is not None:
-            # Inference result exists, proceed to topic suggester with actions
-            state.suggested_topics = suggest_topics(
-                state.context, 
-                state.classified_category, 
-                state.referral_possibility,
-                dry_run=False
-            )
-            state.step = "next: select topics"
-            return state
-        
-        # If inference result doesn't exist, check if actions summary exists
-        if state.actions_summary is not None:
-            # Actions summary exists but no inference yet, run referral possibility inference
-            state.referral_possibility = infer_referral_possibility(
-                state.context, 
-                state.classified_category, 
-                state.actions_summary, 
-                dry_run=False
-            )
-            state.step = "next: referral possibility assessed"
-            return state
-        
-        # If neither inference result nor actions summary exists, check if questions still remain
-        # Generate actions summary for human review
-        state.actions_summary = summarize_actions(
-            state.context, state.classified_category, dry_run=False
-        )
-        state.step = "next: human action required"
-        return state
+    Control-flow (updated):
+    - Entry: classifier (cache classification + routing decisions)
+    - If reply not needed -> end
+    - If no human action required -> suggest topics -> user selects -> generate message -> end
+    - If human action required -> summarize actions -> check fulfilled
+        - If not fulfilled -> prompt user to fulfill actions -> end (current iteration)
+        - If fulfilled -> infer referral possibility -> suggest topics -> user selects -> generate message -> end
+    """
 
-    # If human action is not required, suggest topics
-    else:
-        # Suggest topics
-        state.suggested_topics = suggest_topics(
-            state.context, state.classified_category, referral_possibility=None, dry_run=False
-        )
+    workflow = StateGraph(WorkflowState)
 
-        state.step = "next: select topics"
-        return state
+    workflow.add_node("classify_and_cache", classify_and_cache_node)
+    workflow.add_node("no_reply_end", no_reply_end_node)
+
+    workflow.add_node("check_action_required", lambda s: s)
+    workflow.add_node("suggest_topics", suggest_topics_node)
+    workflow.add_node("generate_message", generate_message_node)
+
+    workflow.add_node("ensure_actions_summary", ensure_actions_summary_node)
+    workflow.add_node("actions_fulfilled", actions_fulfilled_node)
+    workflow.add_node("prompt_fulfill_actions", prompt_fulfill_actions_node)
+    workflow.add_node("infer_referral_possibility", infer_referral_possibility_node)
+
+    workflow.set_entry_point("classify_and_cache")
+
+    # After classification, decide whether a reply is needed.
+    workflow.add_conditional_edges(
+        "classify_and_cache",
+        reply_needed_router,
+        {"end": "no_reply_end", "next": "check_action_required"},
+    )
+    workflow.add_edge("no_reply_end", END)
+
+    # If reply is needed, decide whether human action is required.
+    workflow.add_conditional_edges(
+        "check_action_required",
+        action_required_router,
+        {"no_actions": "topic_selection_gate", "actions": "ensure_actions_summary"},
+    )
+
+    # No-action flow: if topics already selected -> generate; else suggest topics.
+    workflow.add_node("topic_selection_gate", lambda s: s)
+    workflow.add_conditional_edges(
+        "topic_selection_gate",
+        topic_selection_router,
+        {"generate": "generate_message", "suggest": "suggest_topics"},
+    )
+    workflow.add_edge("suggest_topics", END)
+    workflow.add_edge("generate_message", END)
+
+    # Action-required flow: summarize actions -> check fulfilled.
+    workflow.add_edge("ensure_actions_summary", "actions_fulfilled")
+    workflow.add_conditional_edges(
+        "actions_fulfilled",
+        actions_fulfilled_router,
+        {"unfulfilled": "prompt_fulfill_actions", "fulfilled": "infer_referral_possibility"},
+    )
+    workflow.add_edge("prompt_fulfill_actions", END)
+
+    # If fulfilled, infer referral possibility then proceed to topic selection/generation.
+    workflow.add_edge("infer_referral_possibility", "topic_selection_gate")
+
+    return workflow
+
+
+def orchestrate(state: State) -> State:
+    """Run the LangGraph orchestrator and return the updated workflow State."""
+    app = create_workflow().compile()
+    result = app.invoke(WorkflowState(context=state))
+    return result["context"]

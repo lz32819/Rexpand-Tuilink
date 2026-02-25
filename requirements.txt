@@ -28,6 +28,7 @@ langchain==0.3.25
 langchain-core==0.3.64
 langchain-openai==0.3.21
 langchain-text-splitters==0.3.8
+langgraph==0.2.16
 langsmith==0.3.45
 matplotlib-inline==0.1.7
 nest-asyncio==1.6.0
