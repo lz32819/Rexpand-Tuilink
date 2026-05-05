@@ -10,6 +10,13 @@ from utils.llm import invoke_llm
 def classify_conversation(
     context: Context, categories: list[Category], dry_run: bool = False
 ) -> Category:
+    allowed_categories = [c.category for c in categories]
+    category_definitions = "\n".join(
+        [
+            f"- {c.category}: {c.description}\n  Clarification: {c.clarification}"
+            for c in categories
+        ]
+    )
     system_prompt = f"""\
 You are a helpful assistant that classifies the whole conversation between job seeker and referrer into one of the following categories.
 When classifying, always evaluate the **last** messages.
@@ -17,8 +24,12 @@ If multiple categories are applicable, you should choose the one indicating the 
 You will need to provide confidence score, reason, and referenced message ids (only include the most relevant message ids to the classification).
 Never make up facts.
 
+IMPORTANT:
+- The output field `category` MUST be exactly one of the allowed category values below.
+- Allowed categories: {allowed_categories}
+
 Category Definition:
-{categories}
+{category_definitions}
 """
 
     user_prompt = f"""\

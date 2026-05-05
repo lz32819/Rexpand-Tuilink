@@ -1,3 +1,4 @@
+from typing import Literal
 from pydantic import ConfigDict
 
 from models.base import BaseModel
@@ -36,6 +37,10 @@ class Action(BaseModel):
     priority: str
     description: str
     referenced_message_ids: list[str]
+    input_type: Literal["message_response", "completion_boolean"] = "completion_boolean"
+    response_text: str | None = None
+    completed: bool = False
+    response_recorded: bool = False
 
 
 class ActionsSummaryResult(BaseModel):
@@ -51,4 +56,3 @@ class ReferralPossibilityResult(BaseModel):
     referral_possible: bool
     confidence: float
     reason: str | None = None
-    barriers: list[str] | None = None

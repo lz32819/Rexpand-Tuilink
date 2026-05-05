@@ -1,15 +1,17 @@
-import numpy as np
 from pydantic import BaseModel
 
 
 def to_json_compatible(obj):
     """
-    Recursively convert numpy arrays and numpy scalar types to Python native types
-    for JSON serialization.
+    Recursively convert supported objects to JSON-friendly Python values.
+
+    We avoid importing heavy optional dependencies here so the Lambda runtime
+    can stay small. NumPy objects are handled by duck-typing when present.
     """
-    if isinstance(obj, np.ndarray):
+    module_name = type(obj).__module__
+    if module_name.startswith("numpy") and hasattr(obj, "tolist"):
         return obj.tolist()
-    elif isinstance(obj, (np.generic,)):
+    elif module_name.startswith("numpy") and hasattr(obj, "item"):
         return obj.item()
     elif isinstance(obj, dict):
         return {k: to_json_compatible(v) for k, v in obj.items()}
