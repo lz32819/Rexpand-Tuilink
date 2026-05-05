@@ -1,6 +1,8 @@
-import logging
 import hashlib
+import logging
 import os
+import tempfile
+from pathlib import Path
 from typing import Any, Optional
 from langchain_core.messages import BaseMessage, AIMessage
 from langchain_openai import ChatOpenAI
@@ -20,6 +22,29 @@ if not OPENAI_API_KEY:
 default_llm = ChatOpenAI(model="gpt-4.1-mini", temperature=0, api_key=OPENAI_API_KEY)
 
 
+def _resolve_cache_dir() -> Path:
+    """
+    Use a writable cache directory in deployed environments.
+    """
+    configured = os.getenv("LLM_CACHE_DIR")
+    candidates = [Path(configured)] if configured else [Path("./.cache"), Path(tempfile.gettempdir()) / "tuilink-cache"]
+
+    for candidate in candidates:
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+            test_file = candidate / ".write_test"
+            test_file.write_text("", encoding="utf-8")
+            test_file.unlink()
+            return candidate
+        except OSError:
+            continue
+
+    raise OSError("No writable cache directory available")
+
+
+CACHE_DIR = _resolve_cache_dir()
+
+
 def invoke_llm(
     input: LanguageModelInput,
     config: Optional[RunnableConfig] = None,
@@ -32,7 +57,7 @@ def invoke_llm(
     if use_cache:
         # Create a hash of the input string
         input_hash = hashlib.md5((str(input) + "|" + str(config)).encode()).hexdigest()
-        filepath = f"./.cache/{input_hash}.json"
+        filepath = str(CACHE_DIR / f"{input_hash}.json")
 
         cached_response = read_file(filepath)
         if cached_response is not None:

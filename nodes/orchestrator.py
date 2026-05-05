@@ -39,9 +39,7 @@ def _category_meta(state: WorkflowState) -> ExtendedCategory | None:
     return EXTENDED_CATEGORY_LOOKUP.get(cat.category)
 
 
-# -----------------------------
-# Classifier-first entry node
-# -----------------------------
+
 def classify_and_cache_node(state: WorkflowState) -> WorkflowState:
     s = state["context"]
 
@@ -69,10 +67,6 @@ def action_required_router(state: WorkflowState) -> str:
     human_action_required = False if ext is None else bool(ext.human_action_required)
     return "actions" if human_action_required else "no_actions"
 
-
-# -----------------------------
-# No-human-action path
-# -----------------------------
 def topic_selection_router(state: WorkflowState) -> str:
     return "generate" if state["context"].selected_topics is not None else "suggest"
 
@@ -86,7 +80,9 @@ def suggest_topics_node(state: WorkflowState) -> WorkflowState:
             referral_possibility=s.referral_possibility,
             dry_run=False,
         )
-    s.step = "next: select topics"
+    if s.selected_topics is None:
+        s.selected_topics = s.suggested_topics
+    s.step = "next: generate message"
     return state
 
 
@@ -144,10 +140,10 @@ def create_workflow() -> StateGraph:
     Control-flow (updated):
     - Entry: classifier (cache classification + routing decisions)
     - If reply not needed -> end
-    - If no human action required -> suggest topics -> user selects -> generate message -> end
+    - If no human action required -> suggest topics -> auto-select all -> generate message -> end
     - If human action required -> summarize actions -> check fulfilled
         - If not fulfilled -> prompt user to fulfill actions -> end (current iteration)
-        - If fulfilled -> infer referral possibility -> suggest topics -> user selects -> generate message -> end
+        - If fulfilled -> infer referral possibility -> suggest topics -> auto-select all -> generate message -> end
     """
 
     workflow = StateGraph(WorkflowState)
@@ -181,14 +177,14 @@ def create_workflow() -> StateGraph:
         {"no_actions": "topic_selection_gate", "actions": "ensure_actions_summary"},
     )
 
-    # No-action flow: if topics already selected -> generate; else suggest topics.
+    # No-action flow: if topics already selected -> generate; else suggest and auto-select all.
     workflow.add_node("topic_selection_gate", lambda s: s)
     workflow.add_conditional_edges(
         "topic_selection_gate",
         topic_selection_router,
         {"generate": "generate_message", "suggest": "suggest_topics"},
     )
-    workflow.add_edge("suggest_topics", END)
+    workflow.add_edge("suggest_topics", "generate_message")
     workflow.add_edge("generate_message", END)
 
     # Action-required flow: summarize actions -> check fulfilled.
